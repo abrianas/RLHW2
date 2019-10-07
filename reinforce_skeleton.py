@@ -22,9 +22,8 @@ class DiscreteSoftmaxPolicy(object):
         if (state < 0 or state >= self.num_states):
             raise Exception("Invalid state") 
         for a in range(self.num_actions):
-        # soft max policy parameterization
+        # soft max policy parameterization (is this correct way to get the policy parameterization!!)
             pdf[a] = np.exp((self.weights[state][a])/self.temperature)/np.sum(np.exp(self.weights[state][:]/self.temperature))
-        #print(np.sum(np.exp(self.weights[state][:]/self.temperature)))
         action = np.random.choice(self.num_actions,1,p=pdf)
         return action
 
@@ -43,10 +42,9 @@ class DiscreteSoftmaxPolicy(object):
             for a in range(self.num_actions):
                 pdf[s][a] = np.exp(self.weights[s][a]/self.temperature)/np.sum(np.exp(self.weights[s][:]/self.temperature))
         
-        #temp[state][action] = 1 ### for taking the gradient of the weights w.r.t to the weight parameter
-        grad = self.weights - np.dot(self.weights,pdf)
+        temp[state][action] = 1 ### for taking the gradient of the weights w.r.t to the weight parameter
+        grad = temp/self.temperature - np.dot(temp/self.temperature,pdf)
         gradient = discounted_return*grad
-        #print(np.shape(gradient))
         return gradient
 
 
@@ -80,11 +78,10 @@ def get_discounted_returns(rewards, gamma):
 def reinforce(env, policy, gamma, num_episodes, learning_rate):
     episode_rewards = []
     
-    # Remember to update your weights after each episode
+    # Remember to update the weights after each episode, not each step
     for e in range(num_episodes):
         state = env.reset()
         episode_log = []
-        rewards = []
         score = 0
         
         done = False
@@ -97,10 +94,9 @@ def reinforce(env, policy, gamma, num_episodes, learning_rate):
             episode_log.append([state, action, reward, next_state])
             state = next_state
             # Save reward in memory for self.weights updates
-            rewards.append(reward)
             score += reward
             
-            # If done, store results and calculate the gradients
+            # If done, an episode has been complete, store the results for later
             if done:
                 episode_log = np.array(episode_log)
                 rewards = episode_log[:,2].tolist()
@@ -111,7 +107,6 @@ def reinforce(env, policy, gamma, num_episodes, learning_rate):
         for i in range(len(np.vstack(episode_log[:,0]))):
             grads = policy.compute_gradient(episode_log[i,0], episode_log[i,1], discount[i])
             policy.gradient_step(grads, learning_rate) ### 
-        #when should we be updating the weights? after each step or after each episode?
         
         # For logging the sum of the rewards for each episode
         episode_rewards.append(score)
@@ -126,7 +121,7 @@ if __name__ == "__main__":
     policy = DiscreteSoftmaxPolicy(env.get_num_states(), env.get_num_actions(), temperature=1)
     episode_rewards = reinforce(env, policy, gamma, num_episodes, learning_rate)
     #plt.plot(np.arange(num_episodes),episode_rewards)
-    plt.plot(episode_rewards[0:100])
+    plt.plot(episode_rewards[0:2500])
     plt.show()
     # rewards = np.zeros(num_episodes)
     # # gives a sample of what the final policy looks like
