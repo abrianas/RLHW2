@@ -18,11 +18,11 @@ class DiscreteSoftmaxPolicy(object):
     # it should take in an environment state
     # return the action that follows the policy's distribution
     def act(self, state):
-        pdf = np.zeros([self.num_actions])
+        pdf = np.zeros(self.num_actions)
         if (state < 0 or state >= self.num_states):
             raise Exception("Invalid state") 
         for a in range(self.num_actions):
-        # soft max policy parameterization (is this correct way to get the policy parameterization!!)
+        # soft max policy parameterization 
             pdf[a] = np.exp((self.weights[state][a])/self.temperature)/np.sum(np.exp(self.weights[state][:]/self.temperature))
         action = np.random.choice(self.num_actions,1,p=pdf)
         return action
@@ -32,18 +32,25 @@ class DiscreteSoftmaxPolicy(object):
     # computes the gradient of the discounted return 
     # at a specific state and action
     # returns the gradient, a (self.num_states, self.num_actions) numpy array
-    def compute_gradient(self, state, action, discounted_return): ### need to use action and state!
-        grad = np.empty([self.num_states, self.num_actions])
-        pdf = np.empty([self.num_states, self.num_actions]) # probability of getting action a given state s
-        temp = np.empty([self.num_states, self.num_actions]) # RENAME THIS VARIABLE
+    def compute_gradient(self, state, action, discounted_return):
+        grad = np.zeros((self.num_states, self.num_actions))
+        pdf = np.zeros((self.num_states, self.num_actions)) # probability of getting action at a given state
+        gradW = np.zeros(np.shape(self.weights)) 
+        temp = np.zeros(np.shape(self.weights)) 
+        expected_value = np.zeros(np.shape(self.weights))
         
-        # policy parameterization, which is an (self.num_states, self.num_actions) numpy array
+        # policy parameterization
         for s in range(self.num_states):
             for a in range(self.num_actions):
                 pdf[s][a] = np.exp(self.weights[s][a]/self.temperature)/np.sum(np.exp(self.weights[s][:]/self.temperature))
         
-        temp[state][action] = 1 ### for taking the gradient of the weights w.r.t to the weight parameter
-        grad = temp/self.temperature - np.dot(temp/self.temperature,pdf)
+        gradW[state][action] = 1 # for taking the gradient of the weights w.r.t to weight[state][action]
+        temp[state][:] = 1
+        for s in range(self.num_states):
+            expected_value[s][:] = np.dot(gradW[s][:],pdf[s][:])
+            
+        
+        grad = gradW/self.temperature - expected_value/self.temperature
         gradient = discounted_return*grad
         return gradient
 
@@ -105,7 +112,7 @@ def reinforce(env, policy, gamma, num_episodes, learning_rate):
             
         # Calculate the gradients and perform policy weights update
         for i in range(len(np.vstack(episode_log[:,0]))):
-            grads = policy.compute_gradient(episode_log[i,0], episode_log[i,1], discount[i])
+            grads = policy.compute_gradient(episode_log[i,0], episode_log[i,1], (gamma**i)*discount[i])
             policy.gradient_step(grads, learning_rate) ### 
         
         # For logging the sum of the rewards for each episode
@@ -116,15 +123,16 @@ def reinforce(env, policy, gamma, num_episodes, learning_rate):
 if __name__ == "__main__":
     gamma = 0.9
     num_episodes = 20000
-    learning_rate = 1e-4
-    env = GridWorld(MAP1)
-    policy = DiscreteSoftmaxPolicy(env.get_num_states(), env.get_num_actions(), temperature=1)
+    learning_rate = 1e-1
+    env = GridWorld(MAP2)
+    policy = DiscreteSoftmaxPolicy(env.get_num_states(), env.get_num_actions(), temperature=5)
     episode_rewards = reinforce(env, policy, gamma, num_episodes, learning_rate)
-    #plt.plot(np.arange(num_episodes),episode_rewards)
-    plt.plot(episode_rewards[0:2500])
-    plt.show()
-    # rewards = np.zeros(num_episodes)
-    # # gives a sample of what the final policy looks like
+    # plt.plot(np.arange(num_episodes),episode_rewards)
+    # plt.xlabel("Number of Episodes")
+    # plt.ylabel("Total Rewards")
+    # plt.show()
+    
+    # # # gives a sample of what the final policy looks like
     # print("Rolling out final policy")
     # state = env.reset()
     # env.print()
@@ -132,17 +140,21 @@ if __name__ == "__main__":
     # while not done:
         # input("press enter to continue:")
         # action = policy.act(state)
-        # state, reward, done = env.step(action) # do we need to store each reward in an array to plot later?
+        # state, reward, done = env.step(action)
         # env.print()
         
     # Runs reinforce algorithm 20 times training on 20,000 episodes each time 
     # and counts the number of times the goal is reached
-    # maxReward = np.amax(episode_rewards)
-    # trials = 20
-    # num_goals = 0
-    # for t in range(trials):
-        # episode_rewards = reinforce(env, policy, gamma, num_episodes, learning_rate)
-        # for e in range(len(episode_rewards)):
-            # if np.amax(episode_rewards) == maxReward:
-                # num_goals+=1
-    # print(num_goals)
+    maxReward = np.amax(episode_rewards)
+    #print(maxReward)
+    trials = 20
+    for t in range(trials):
+        print(t)
+        num_goals = 0
+        policy = DiscreteSoftmaxPolicy(env.get_num_states(), env.get_num_actions(), temperature=5)
+        episode_rewards = reinforce(env, policy, gamma, num_episodes, learning_rate)
+        for e in range(len(episode_rewards)):
+            if np.amax(episode_rewards) == maxReward:
+                num_goals+=1
+        env.print() # prints the final policy
+        print(num_goals)
