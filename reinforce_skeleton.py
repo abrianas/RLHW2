@@ -42,8 +42,8 @@ class DiscreteSoftmaxPolicy(object):
         
         gradW[state][action] = 1 # for taking the gradient of the weights w.r.t to weight[state][action]
         # for s in range(self.num_states):
-            # expected_value[s][action] = np.dot(gradW[s][:],pdf[s][:])
-        expected_value[state][:] = np.dot(gradW[state][:],pdf[:])
+            # expected_value[s][:] = pdf[s][:]
+        expected_value[state][:] = pdf[:]
             
         
         grad = (gradW - expected_value)/self.temperature
@@ -111,7 +111,7 @@ def reinforce(env, policy, gamma, num_episodes, learning_rate):
             
         # Calculate the gradients and perform policy weights update
         for i in range(len(episode_log[:,0])):
-            grads = policy.compute_gradient(episode_log[i,0], episode_log[i,1], discount[i])
+            grads = policy.compute_gradient(episode_log[i,0], episode_log[i,1], (gamma**i)*discount[i])
             policy.gradient_step(grads, learning_rate) 
         
         # For logging the sum of the rewards for each episode
@@ -144,8 +144,6 @@ if __name__ == "__main__":
         
     # Runs reinforce algorithm 20 times training on 20,000 episodes each time 
     # and counts the number of times the goal is reached
-    maxReward = np.amax(episode_rewards)
-    #print(maxReward)
     trials = 20
     for t in range(trials):
         print(t+1) # prints out the trial number
@@ -153,7 +151,9 @@ if __name__ == "__main__":
         policy = DiscreteSoftmaxPolicy(env.get_num_states(), env.get_num_actions(), temperature=5)
         episode_rewards = reinforce(env, policy, gamma, num_episodes, learning_rate)
         for e in range(len(episode_rewards)):
-            if episode_rewards[e] == maxReward:
+            if episode_rewards[e] > 0:
                 num_goals+=1
-        #env.print() # prints the final policy
+            else: # to look at policies that do not reach the goal
+                print(episode_rewards[e])
+                env.print()
         print(num_goals)
