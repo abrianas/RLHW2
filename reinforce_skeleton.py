@@ -155,5 +155,5 @@ if __name__ == "__main__":
                 num_goals+=1
             else: # to look at policies that do not reach the goal
                 print(episode_rewards[e])
-                env.print()
+                #env.print()
         print(num_goals)
