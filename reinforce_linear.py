@@ -1,6 +1,7 @@
 from mountain_car import *
 import numpy as np
 import pdb
+import matplotlib.pyplot as plt
 
 class LinearPolicy(object):
     def __init__(self, num_states, num_actions):
@@ -16,11 +17,9 @@ class LinearPolicy(object):
     # return the action that follows the policy's distribution
     def act(self, state):
 
-        sigma = 0.1
+        sigma = 1.0
         action = np.random.normal(np.dot(self.weights.T,state),sigma)
         #action = np.dot(self.weights.T,state) + np.random.normal(0,sigma)
-
-
 
         return action
 
@@ -30,7 +29,8 @@ class LinearPolicy(object):
     # at a specific state and action
     # return the gradient, a (self.num_states, self.num_actions) numpy array
     def compute_gradient(self, state, action, discounted_return):
-        sigma = 0.1
+        sigma = 1.0
+
         grad = ((action - np.dot(self.weights.T,state))/sigma**2)*state
         grad = grad*discounted_return
         return grad
@@ -110,13 +110,35 @@ def reinforce(env, policy, gamma, num_episodes, learning_rate):
 
 if __name__ == "__main__":
     gamma = 0.9
-    num_episodes = 20000
+    num_episodes = 1000
     learning_rate = 1e-4
     env = Continuous_MountainCarEnv()
 
-    policy = LinearPolicy(2, 1)
+
     ## returning a list of rewards after each episode for plotting purposes
-    episode_rewards = reinforce(env, policy, gamma, num_episodes, learning_rate)
+
+
+    train_rewards = []
+    train = 5
+
+
+    for i in range(0,train):
+        policy = LinearPolicy(2, 1)
+        episode_rewards = reinforce(env, policy, gamma, num_episodes, learning_rate)
+        train_rewards.append(episode_rewards)
+        plt.plot(np.arange(num_episodes),episode_rewards)
+        plt.xlabel("Number of Episodes")
+        plt.ylabel("Total Rewards")
+        plt.show()
+
+
+    plt.plot(np.arange(num_episodes),np.min(train_rewards, axis = 0))
+    plt.plot(np.arange(num_episodes),np.max(train_rewards, axis = 0))
+    plt.legend(["Min Rewards","Max Rewards"])
+    plt.xlabel("Number of Episodes")
+    plt.ylabel("Rewards")
+    plt.show()
+
 
     # gives a sample of what the final policy looks like
     print("Rolling out final policy")

@@ -1,6 +1,7 @@
 from mountain_car import *
 import numpy as np
 import pdb
+import matplotlib.pyplot as plt
 
 class CustomPolicy(object):
     def __init__(self, num_states, num_actions, no_rbf):
@@ -95,7 +96,7 @@ def reinforce(env, policy, gamma, num_episodes, learning_rate, centers, rbf_sigm
         episode_rewards.append(np.sum(rewards))
         discount_rewards = get_discounted_returns(rewards, gamma)
 
-        print(done,iter,e,np.sum(rewards))
+        # print(done,iter,e,np.sum(rewards))
 
 
 
@@ -121,12 +122,14 @@ def rbf(state, centers, rbf_sigma):
 def compute_rbf_centers(state_high, state_low, no_rbf):
     pos_state = np.linspace(state_low[0], state_high[0],no_rbf)
     vel_state = np.linspace(state_low[1], state_high[1],no_rbf)
+
+
     rbf_centers = np.zeros([no_rbf,2])
 
 
     # rbf_centers = np.zeros([no_rbf,2])
-    # rbf_centers[:,0] = pos_state[1:no_rbf+1]
-    # rbf_centers[:,1] = vel_state[1:no_rbf+1]
+    # rbf_centers[:,0] = pos_state[1:-1]
+    # rbf_centers[:,1] = vel_state[1:-1]
     rbf_centers[0,:] = [pos_state[1], vel_state[1]]
     rbf_centers[1,:] = [pos_state[1], vel_state[2]]
     rbf_centers[2,:] = [pos_state[2], vel_state[1]]
@@ -145,13 +148,13 @@ def compute_rbf_centers(state_high, state_low, no_rbf):
 
 if __name__ == "__main__":
     gamma = 0.9
-    num_episodes = 20000
-    learning_rate = 0.0001
+    num_episodes = 2000
+    learning_rate = 0.001
     env = Continuous_MountainCarEnv()
 
     ## rbf stuff
-    no_rbf =4
-    rbf_sigma = 1./(no_rbf - 1.0)
+    no_rbf = 4
+    rbf_sigma = 1.0/(no_rbf - 1.0)
     # rbf_sigma = 1
 
     state_high = env.high_state
@@ -161,11 +164,29 @@ if __name__ == "__main__":
     # pdb.set_trace()
 
 
+    train_rewards = []
+    train = 5
 
-    policy = CustomPolicy(2, 1, no_rbf)
-    reinforce(env, policy, gamma, num_episodes, learning_rate, centers, rbf_sigma)
+
+    for i in range(0,5):
+        policy = CustomPolicy(2, 1, no_rbf)
+        episode_rewards = reinforce(env, policy, gamma, num_episodes, learning_rate, centers, rbf_sigma)
+        train_rewards.append(episode_rewards)
+        plt.plot(np.arange(num_episodes),episode_rewards)
+        plt.xlabel("Number of Episodes")
+        plt.ylabel("Total Rewards")
+        plt.show()
+
+
+    plt.plot(np.arange(num_episodes),np.min(train_rewards, axis = 0))
+    plt.plot(np.arange(num_episodes),np.max(train_rewards, axis = 0))
+    plt.legend(["Min Rewards","Max Rewards"])
+    plt.xlabel("Number of Episodes")
+    plt.ylabel("Rewards")
+    plt.show()
 
     # gives a sample of what the final policy looks like
+
     print("Rolling out final policy")
     state = env.reset()
     # env.print()
