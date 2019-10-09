@@ -3,12 +3,12 @@ import numpy as np
 import pdb
 
 class CustomPolicy(object):
-    def __init__(self, num_states, num_actions, no_rbf):
+    def __init__(self, num_states, num_actions):
         self.num_states = num_states
         self.num_actions = num_actions
 
         # here are the weights for the policy - you may change this initialization
-        self.weights = np.random.random((no_rbf, self.num_actions))
+        self.weights = np.random.random((self.num_states, self.num_actions))
 
 
 
@@ -65,13 +65,13 @@ def get_discounted_returns(rewards, gamma):
 # a policy (DiscreteSoftmaxPolicy)
 # a discount rate, gamma
 # and the number of episodes you want to run the algorithm for
-def reinforce(env, policy, gamma, num_episodes, learning_rate, centers, rbf_sigma):
+def reinforce(env, policy, gamma, num_episodes, learning_rate, state_grid):
     episode_rewards = []
 
     for e in range(num_episodes):
 
         state = env.reset()
-        feature_state = rbf(state, centers, rbf_sigma)
+        state_d = discretize(state, state_grid)
 
         episode_log = []
         iter = 0
@@ -107,40 +107,28 @@ def reinforce(env, policy, gamma, num_episodes, learning_rate, centers, rbf_sigm
 
     return episode_rewards
 
+def discretize(state, grid):
 
+    s = np.zeros([len(state),1])
 
-def rbf(state, centers, rbf_sigma):
-
-    phi = []
-    for c in range(0,len(centers)):
-        rbf_eval = np.exp(-np.linalg.norm(state - centers[c,:])**2/(2*(rbf_sigma**2)))
-        phi.append(rbf_eval)
-    # phi = np.reshape(phi,[-1,1])
-    return phi
-
-def compute_rbf_centers(state_high, state_low, no_rbf):
-    pos_state = np.linspace(state_low[0], state_high[0],no_rbf)
-    vel_state = np.linspace(state_low[1], state_high[1],no_rbf)
-    rbf_centers = np.zeros([no_rbf,2])
-
-
-    # rbf_centers = np.zeros([no_rbf,2])
-    # rbf_centers[:,0] = pos_state[1:no_rbf+1]
-    # rbf_centers[:,1] = vel_state[1:no_rbf+1]
-    rbf_centers[0,:] = [pos_state[1], vel_state[1]]
-    rbf_centers[1,:] = [pos_state[1], vel_state[2]]
-    rbf_centers[2,:] = [pos_state[2], vel_state[1]]
-    rbf_centers[3,:] = [pos_state[2], vel_state[2]]
-
-    # rbf_centers[4,:] = [pos_state[1], vel_state[3]]
-    # rbf_centers[5,:] = [pos_state[3], vel_state[1]]
-    #
+    for l in range(0,len(grid)):
+        print(l)
+        s[l] = grid[l][np.digitize(state[l], grid[0])]
+    print(state, s)
+    return s
 
 
 
 
 
-    return rbf_centers
+
+def create_grid(low, high, bins)):
+    grid = [np.linspace(low[dim], high[dim], bins[dim] + 1)[1:-1] for dim in range(len(bins))]
+
+    return grid
+
+
+
 
 
 if __name__ == "__main__":
@@ -149,21 +137,18 @@ if __name__ == "__main__":
     learning_rate = 0.0001
     env = Continuous_MountainCarEnv()
 
-    ## rbf stuff
-    no_rbf =4
-    rbf_sigma = 1./(no_rbf - 1.0)
-    # rbf_sigma = 1
-
     state_high = env.high_state
     state_low = env.low_state
 
-    centers = compute_rbf_centers(state_high, state_low, no_rbf)
-    # pdb.set_trace()
+    action_high = env.max_action
+    aciton_low = env.min_action
+
+    state_grid = state_create_grid(state_low, state_high, bins=(10,10))
+    action_grid = create_grid(action_low, action_high, bins= 10))
 
 
-
-    policy = CustomPolicy(2, 1, no_rbf)
-    reinforce(env, policy, gamma, num_episodes, learning_rate, centers, rbf_sigma)
+    policy = CustomPolicy(2, 1)
+    reinforce(env, policy, gamma, num_episodes, learning_rate, state_grid )
 
     # gives a sample of what the final policy looks like
     print("Rolling out final policy")
